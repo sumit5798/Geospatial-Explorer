@@ -7,6 +7,29 @@ from multiprocessing import Manager, Queue
 import json
 from functools import partial
 
+def load_balancer(input_file_path):
+    print("load balncer")
+    # Read lines from the file
+    with open(input_file_path, 'r') as file:
+        lines = file.readlines()
+
+    # Get the number of Docker instances and total lines
+    docker_instance = int(os.environ.get('DOCKER_INSTANCE', 1))
+    total_lines = len(lines)
+
+    # Calculate lines per instance
+    lines_per_instance = total_lines // 2
+
+    # Calculate start and end indices for the current Docker instance
+    start_index = (docker_instance - 1) * lines_per_instance
+    end_index = min(docker_instance * lines_per_instance, total_lines)
+    print(start_index)
+    print(end_index)
+    # Select the lines for the current chunk
+    lines_to_process = lines[start_index:end_index]
+
+    return lines_to_process
+
 def split(json_str):
     splitted_json_elements = []
 
@@ -67,25 +90,21 @@ def process_line(shared_ratings, lock, line_chunks):
                         print(f'gmap: {gmap_id}, rating:{shared_ratings[gmap_id]["total_rating"]}, num_reviews:{shared_ratings[gmap_id]["num_reviews"]}')
 
 def main():
-    input_file_path = 'tempReview.json'
+    input_file_path = 'review-New_Mexico.json'
     metadata_file_path = 'meta-New_Mexico.json'
+    num_processes = 2
 
     with open(metadata_file_path, 'r') as metadata_file:
         metadata_list = [json.loads(line) for line in metadata_file]
         
-    with open(input_file_path, 'r') as file:
-        lines = file.readlines()
-
-
-    start_index = int(os.environ.get('START', 0))
-    end_index = int(os.environ.get('END', 4))
-    print(start_index, end_index)
-
+    print("b4 load balncer")
     # Select the lines for the current chunk
-    line_chunks = lines[start_index:end_index]
+    line_chunks = load_balancer(input_file_path)
+
+    print("after load balncer")
 
     # Adjust the chunk size according to the number of lines you want to process in parallel
-    chunk_size = 2
+    chunk_size = len(line_chunks) // num_processes
 
     # Split the lines into chunks of the specified size
     line_chunks_process = [line_chunks[i:i + chunk_size] for i in range(0, len(line_chunks), chunk_size)]

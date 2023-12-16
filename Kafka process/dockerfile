@@ -4,6 +4,7 @@ WORKDIR /app
 
 COPY producer.py /app/
 COPY meta-New_Mexico.json /app/
+COPY review-New_Mexico.json /app/
 COPY tempReview.json /app/
 
 RUN pip install kafka-python
