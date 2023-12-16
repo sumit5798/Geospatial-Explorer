@@ -11,17 +11,21 @@ import uuid
 from threading import Thread
 
 def consume_messages(consumer, cluster, bucket_name):
+    print("Consume messages")
     try:
+        print("Inside try block")
         # Create a Couchbase bucket for each consumer thread
         bucket = cluster.bucket(bucket_name)
         collection = bucket.default_collection()
 
         count = 0
         for record in consumer:
+            print("Inside try block1")
             msg = record.value
             count += 1
 
             try:
+                print("Inside try block2")
                 doc = json.loads(msg)
                 id = str(uuid.uuid4())
 
@@ -65,7 +69,7 @@ def main():
     for i in range(num_consumer_threads):
         # Set up Kafka consumer inside the loop to create a new instance for each thread
         consumer = KafkaConsumer(
-            'googleReviewTopic',
+            'ExTopic',
             bootstrap_servers='localhost:9092',
             group_id=f'my_consumer_group',  # Use a unique group ID for each consumer instance
             value_deserializer=lambda x: x.decode('utf-8'),

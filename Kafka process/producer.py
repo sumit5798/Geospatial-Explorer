@@ -1,4 +1,6 @@
 import multiprocessing
+import os
+import sys
 from kafka import KafkaProducer
 from concurrent.futures import ProcessPoolExecutor
 from multiprocessing import Manager, Queue
@@ -26,11 +28,11 @@ def split(json_str):
 
     return splitted_json_elements
 
-def process_line(shared_ratings, line_chunks):
+def process_line(shared_ratings, lock, line_chunks):
     # Process each line in the chunk
     for line in line_chunks:
         jsons = line.strip()
-        #print("Processing line: " + jsons)
+        print("Processing line: " + jsons)
 
         if jsons:
             # print("Splitting file chunk to jsons....")
@@ -50,7 +52,7 @@ def process_line(shared_ratings, line_chunks):
                 rating = review_data.get('rating')
                 if rating is None:
                     rating = 0
-                with multiprocessing.Lock():
+                with lock:
                     if gmap_id in shared_ratings:
                         shared_ratings[gmap_id] = {
                             'total_rating': rating + shared_ratings[gmap_id]["total_rating"],
@@ -62,43 +64,59 @@ def process_line(shared_ratings, line_chunks):
                             'total_rating': rating,
                             'num_reviews': 1
                         }
+                        print(f'gmap: {gmap_id}, rating:{shared_ratings[gmap_id]["total_rating"]}, num_reviews:{shared_ratings[gmap_id]["num_reviews"]}')
 
 def main():
-    input_file_path = 'C:/Users/sumit/OneDrive/Desktop/Study/DSD/Project/COMP-6231-Project/review-New_Mexico.json'  # Update with the actual path
-    # Load metadata
-    metadata_file_path = 'C:/Users/sumit/OneDrive/Desktop/Study/DSD/Project/COMP-6231-Project/meta-New_Mexico.json'
+    input_file_path = 'tempReview.json'
+    metadata_file_path = 'meta-New_Mexico.json'
+
     with open(metadata_file_path, 'r') as metadata_file:
         metadata_list = [json.loads(line) for line in metadata_file]
         
     with open(input_file_path, 'r') as file:
         lines = file.readlines()
 
+
+    start_index = int(os.environ.get('START', 0))
+    end_index = int(os.environ.get('END', 4))
+    print(start_index, end_index)
+
+    # Select the lines for the current chunk
+    line_chunks = lines[start_index:end_index]
+
     # Adjust the chunk size according to the number of lines you want to process in parallel
-    chunk_size = 10000
+    chunk_size = 2
 
     # Split the lines into chunks of the specified size
-    line_chunks = [lines[i:i + chunk_size] for i in range(0, len(lines), chunk_size)]
+    line_chunks_process = [line_chunks[i:i + chunk_size] for i in range(0, len(line_chunks), chunk_size)]
+
+    print(line_chunks_process)
 
     # Use a multiprocessing Manager to create a shared dictionary
     with Manager() as manager:
         shared_ratings = manager.dict()
+        lock = manager.Lock()
 
-        process_line_partial = partial(process_line, shared_ratings)
+        process_line_partial = partial(process_line, shared_ratings, lock)
 
         with ProcessPoolExecutor() as executor:
             # Pass the partially-applied function to the map
-            executor.map(process_line_partial, line_chunks)
+            executor.map(process_line_partial, line_chunks_process)
 
         # Wait for all processes to complete
         executor.shutdown(wait=True)
 
         # Send data to Kafka after processing all chunks
-        bootstrap_servers = 'localhost:9092'
-        topic = 'googleReviewTopic'
+        bootstrap_servers = '192.168.2.19:9092'
+        topic = 'ExTopic'
         producer = KafkaProducer(
             bootstrap_servers=bootstrap_servers,
             batch_size=16384,
-            linger_ms=5
+            linger_ms=5,
+            retries=3,  # Optional: You can adjust the number of retries
+            acks='all',  # Optional: You can adjust the number of acknowledgments
+            # Add the following line to increase metadata update timeout
+            metadata_max_age_ms=60000  # Set the value in milliseconds (60 seconds in this example)
         )
 
         # Process the shared ratings and send to Kafka
