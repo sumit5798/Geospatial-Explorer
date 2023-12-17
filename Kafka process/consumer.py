@@ -19,7 +19,7 @@ def consume_messages(consumer, shared_collection, lock, ratings_dict):
 
         while True:
             # Poll for records with a timeout of 0, which means non-blocking
-            records = consumer.poll(timeout_ms=1800*1000)
+            records = consumer.poll(timeout_ms=120*1000)
 
             # Check if there are any records
             if not records:

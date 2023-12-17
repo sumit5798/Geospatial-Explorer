@@ -90,8 +90,8 @@ def process_line(shared_ratings, lock, line_chunks):
                         print(f'gmap: {gmap_id}, rating:{shared_ratings[gmap_id]["total_rating"]}, num_reviews:{shared_ratings[gmap_id]["num_reviews"]}')
 
 def main():
-    input_file_path = 'review-New_Mexico.json'
-    metadata_file_path = 'meta-New_Mexico.json'
+    input_file_path = 'tempReview.json'
+    metadata_file_path = 'meta-California.json'
     num_processes = 2
 
     with open(metadata_file_path, 'r') as metadata_file:
