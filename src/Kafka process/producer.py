@@ -2,6 +2,15 @@ from kafka import KafkaProducer
 import json
 
 def main():
+    """
+    Main function that processes a file, splits it into JSON documents, and sends them to a Kafka topic.
+
+    Args:
+        None
+
+    Returns:
+        None
+    """
     bootstrap_servers = 'localhost:9092'
     topic = 'googleReviewTopic'
 

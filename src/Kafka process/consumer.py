@@ -7,6 +7,19 @@ import json
 import uuid
 
 def main():
+    """
+    Main function that consumes messages from a Kafka topic and stores them in a Couchbase bucket.
+
+    This function initializes a Kafka consumer, connects to a Couchbase cluster, and retrieves a bucket and collection
+    to store the consumed messages. It then enters a loop to consume messages from the Kafka topic, parse them as JSON,
+    generate a unique ID for each message, and upsert the message document into the Couchbase collection.
+
+    If a message is not a valid JSON object, it prints an error message. If any exception occurs during the process,
+    it prints an exception message. Finally, it disconnects from the Couchbase cluster.
+
+    Note: Make sure to replace the placeholder values for Kafka bootstrap servers, Couchbase cluster URL, and
+    authentication credentials with the actual values specific to your environment.
+    """
     consumer = KafkaConsumer(
         'googleReviewTopic',
         bootstrap_servers='localhost:9092',
